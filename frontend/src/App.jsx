@@ -1,3 +1,48 @@
+const API_URL = "http://127.0.0.1:5000";
+
+
+const getUserLocation = async () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const location = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        try {
+          const response = await fetch(`${API_URL}/api/location/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(location),
+          });
+
+          const data = await response.json();
+
+          console.log("Location response:", data);
+
+          resolve(location);
+        } catch (error) {
+          console.error("Could not send location to backend:", error);
+          reject(error);
+        }
+      },
+      (error) => {
+        console.error("Location error:", error);
+        reject(error);
+      }
+    );
+  });
+};
+
+
 import React from "react";
 import {
   ArrowRight, CalendarDays, Camera, Check, Clock3, Compass, Crosshair,
@@ -76,33 +121,457 @@ function Home({ setActive }) {
 }
 
 function Explore() {
-  return <PageShell eyebrow="EXPLORE OUTSIDE" title="Find somewhere worth going." subtitle="Places nearby, picked for how good they are to be outside today.">
-    <div className="search-row"><div className="search-box"><Search size={19}/><input placeholder="Search places, parks, walks..." /></div><button className="filter-button"><SlidersHorizontal size={17}/> Filters</button></div>
-    <div className="chip-row"><span className="chip active">For you</span><span className="chip">Nature</span><span className="chip">Walks</span><span className="chip">Photography</span><span className="chip">Peaceful</span><span className="chip">Free</span></div>
-    <div className="ai-banner"><div className="ai-banner-icon"><Sparkles size={21}/></div><div><strong>Gemma's pick for today</strong><p>Cloudy skies + mild weather make outdoor walks especially comfortable this afternoon.</p></div><span className="score">8.7</span></div>
-    <div className="place-grid">{places.map(p => <PlaceCard key={p.title} place={p}/>)}</div>
-  </PageShell>;
+  const [places, setPlaces] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch(`${API_URL}/api/explore/`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch places");
+        }
+        return response.json();
+      })
+      .then(data => {
+        setPlaces(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Failed to fetch places:", error);
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <PageShell
+        eyebrow="EXPLORE OUTSIDE"
+        title="Find somewhere worth going."
+        subtitle="Places nearby, picked for how good they are to be outside today."
+      >
+        <p>Finding places worth going to... 🌱</p>
+      </PageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageShell
+        eyebrow="EXPLORE OUTSIDE"
+        title="Find somewhere worth going."
+        subtitle="Places nearby, picked for how good they are to be outside today."
+      >
+        <p>
+          Couldn't load places. Make sure the TouchGrass backend is running.
+        </p>
+      </PageShell>
+    );
+  }
+
+  return (
+    <PageShell
+      eyebrow="EXPLORE OUTSIDE"
+      title="Find somewhere worth going."
+      subtitle="Places nearby, picked for how good they are to be outside today."
+    >
+      <div className="search-row">
+        <div className="search-box">
+          <Search size={19} />
+          <input placeholder="Search places, parks, walks..." />
+        </div>
+
+        <button className="filter-button">
+          <SlidersHorizontal size={17} />
+          Filters
+        </button>
+      </div>
+
+      <div className="chip-row">
+        <span className="chip active">For you</span>
+        <span className="chip">Nature</span>
+        <span className="chip">Walks</span>
+        <span className="chip">Photography</span>
+        <span className="chip">Peaceful</span>
+        <span className="chip">Free</span>
+      </div>
+
+      <div className="ai-banner">
+        <div className="ai-banner-icon">
+          <Sparkles size={21} />
+        </div>
+
+        <div>
+          <strong>Gemma's pick for today</strong>
+          <p>
+            Cloudy skies + mild weather make outdoor walks especially
+            comfortable this afternoon.
+          </p>
+        </div>
+
+        <span className="score">8.7</span>
+      </div>
+
+      <div className="place-grid">
+        {places.map(place => (
+          <PlaceCard
+            key={place.title}
+            place={place}
+          />
+        ))}
+      </div>
+    </PageShell>
+  );
 }
 
 function Events() {
   const [filter, setFilter] = React.useState("Today");
-  const filtered = filter === "All" ? events : events.filter(e => filter === "Today" ? e.date === "Today" : e.date !== "Today");
-  return <PageShell eyebrow="EVENTS AROUND YOU" title="Something is happening outside." subtitle="Real-world things to do, close enough that you might actually go.">
-    <div className="event-toolbar"><div className="chip-row"><span className={`chip ${filter === "Today" ? "active" : ""}`} onClick={() => setFilter("Today")}>Today</span><span className={`chip ${filter === "Tomorrow" ? "active" : ""}`} onClick={() => setFilter("Tomorrow")}>Tomorrow</span><span className={`chip ${filter === "Weekend" ? "active" : ""}`} onClick={() => setFilter("Weekend")}>This weekend</span><span className={`chip ${filter === "All" ? "active" : ""}`} onClick={() => setFilter("All")}>All</span></div><button className="filter-button"><Filter size={17}/> Categories</button></div>
-    <div className="events-feature"><div><span className="eyebrow dark"><Sparkles size={15}/> AI SHORTLIST</span><h2>12 things are happening nearby.</h2><p>We’d start with the photography walk. It ends right around the best sunset window.</p></div><button className="light-button dark-button">Show me <ArrowRight size={16}/></button></div>
-    <div className="events-grid events-page-grid">{filtered.map(e => <EventCard key={e.title} event={e}/>)}</div>
-  </PageShell>;
+  const [events, setEvents] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch(`${API_URL}/api/events/`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        return response.json();
+      })
+      .then(data => {
+        setEvents(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Failed to fetch events:", error);
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <PageShell
+        eyebrow="EVENTS AROUND YOU"
+        title="Something is happening outside."
+        subtitle="Real-world things to do, close enough that you might actually go."
+      >
+        <p>Finding things happening near you... 🌱</p>
+      </PageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageShell
+        eyebrow="EVENTS AROUND YOU"
+        title="Something is happening outside."
+        subtitle="Real-world things to do, close enough that you might actually go."
+      >
+        <p>
+          Couldn't load events. Make sure the TouchGrass backend is running.
+        </p>
+      </PageShell>
+    );
+  }
+
+  const filtered =
+    filter === "All"
+      ? events
+      : filter === "Today"
+        ? events.filter(e => e.date === "Today")
+        : filter === "Tomorrow"
+          ? events.filter(e => e.date === "Tomorrow")
+          : events.filter(e => e.date !== "Today" && e.date !== "Tomorrow");
+
+  return (
+    <PageShell
+      eyebrow="EVENTS AROUND YOU"
+      title="Something is happening outside."
+      subtitle="Real-world things to do, close enough that you might actually go."
+    >
+      <div className="event-toolbar">
+        <div className="chip-row">
+          <span
+            className={`chip ${filter === "Today" ? "active" : ""}`}
+            onClick={() => setFilter("Today")}
+          >
+            Today
+          </span>
+
+          <span
+            className={`chip ${filter === "Tomorrow" ? "active" : ""}`}
+            onClick={() => setFilter("Tomorrow")}
+          >
+            Tomorrow
+          </span>
+
+          <span
+            className={`chip ${filter === "Weekend" ? "active" : ""}`}
+            onClick={() => setFilter("Weekend")}
+          >
+            This weekend
+          </span>
+
+          <span
+            className={`chip ${filter === "All" ? "active" : ""}`}
+            onClick={() => setFilter("All")}
+          >
+            All
+          </span>
+        </div>
+
+        <button className="filter-button">
+          <Filter size={17} />
+          Categories
+        </button>
+      </div>
+
+      <div className="events-feature">
+        <div>
+          <span className="eyebrow dark">
+            <Sparkles size={15} />
+            AI SHORTLIST
+          </span>
+
+          <h2>12 things are happening nearby.</h2>
+
+          <p>
+            We’d start with the photography walk. It ends right around the
+            best sunset window.
+          </p>
+        </div>
+
+        <button className="light-button dark-button">
+          Show me <ArrowRight size={16} />
+        </button>
+      </div>
+
+      <div className="events-grid events-page-grid">
+        {filtered.map(event => (
+          <EventCard
+            key={event.id}
+            event={event}
+          />
+        ))}
+      </div>
+    </PageShell>
+  );
 }
 
 function Missions() {
   const [minutes, setMinutes] = React.useState(45);
   const [mood, setMood] = React.useState("Peaceful");
   const [generated, setGenerated] = React.useState(false);
-  const mission = minutes <= 20 ? {title:"Take the long way home", place:"A nearby quiet street or park", steps:["Leave your phone in your pocket for 15 minutes.","Walk without your usual route or playlist.","Stop somewhere green and notice five things around you."]} : minutes >= 75 ? {title:"Make an afternoon of it", place:"Lalbagh + a slow neighbourhood walk", steps:["Head to Lalbagh and pick a path without planning it.","Find one plant, bird, or view you haven't noticed before.","Sit outside for ten quiet minutes before heading back."]} : {title:"Chase the last light", place:"Ulsoor Lake", steps:["Leave around 5:20 PM and walk toward the lake.","Put your phone away until you reach the water.","Stay for the sunset. Take exactly one photo, then walk home."]};
-  return <PageShell eyebrow="YOUR OUTDOOR MISSION" title="I have some time. Make me go outside." subtitle="Tell OutThere what you have. We'll turn it into a small adventure.">
-    <div className="mission-builder"><div className="builder-side"><div className="builder-label">I HAVE</div><div className="time-options">{[20,45,90].map(m => <button key={m} className={minutes===m ? "time-option active" : "time-option"} onClick={() => {setMinutes(m);setGenerated(false)}}><strong>{m}</strong><span>minutes</span></button>)}</div><div className="builder-label">I WANT TO FEEL</div><div className="mood-options">{["Peaceful","Curious","Social","Adventurous"].map(m => <button key={m} className={mood===m ? "mood-option active" : "mood-option"} onClick={() => setMood(m)}>{m}</button>)}</div><div className="budget-row"><span><Ticket size={17}/> Budget</span><strong>₹0–₹300</strong></div><button className="mission-generate" onClick={() => setGenerated(true)}><Sparkles size={18}/> {generated ? "Make another mission" : "Give me a mission"}</button></div><div className="mission-preview"><div className="mission-orbit"><Crosshair size={30}/></div><span className="mission-kicker">{generated ? "YOUR MISSION" : "READY WHEN YOU ARE"}</span><h2>{generated ? mission.title : "A little outside time goes a long way."}</h2><p>{generated ? `${mission.place} · ${minutes} minutes · ${mood.toLowerCase()}` : "Choose your time and mood, then let OutThere decide what is worth leaving the house for."}</p>{generated && <div className="mission-steps">{mission.steps.map((s,i)=><div key={s}><span>{i+1}</span><p>{s}</p></div>)}</div>}{!generated && <div className="mission-hint"><Leaf size={17}/> The goal isn't to use the app. It's to leave it.</div>}</div></div>
-    <div className="mission-rules"><div><Clock3/><strong>45 min default</strong><span>Short enough to actually do</span></div><div><MapPin/><strong>Nearby first</strong><span>No epic planning required</span></div><div><Sparkles/><strong>AI-guided</strong><span>Gemma turns context into a plan</span></div></div>
-  </PageShell>;
+  const [mission, setMission] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(false);
+
+  const generateMission = () => {
+    setLoading(true);
+    setError(false);
+
+    fetch(`${API_URL}/api/missions/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        time: `${minutes} minutes`,
+        budget: 300,
+        mood: mood
+      })
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Failed to generate mission");
+        }
+
+        return response.json();
+      })
+      .then(data => {
+        setMission(data);
+        setGenerated(true);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Failed to generate mission:", error);
+        setError(true);
+        setLoading(false);
+      });
+  };
+
+  return (
+    <PageShell
+      eyebrow="YOUR OUTDOOR MISSION"
+      title="I have some time. Make me go outside."
+      subtitle="Tell OutThere what you have. We'll turn it into a small adventure."
+    >
+      <div className="mission-builder">
+
+        <div className="builder-side">
+
+          <div className="builder-label">
+            I HAVE
+          </div>
+
+          <div className="time-options">
+            {[20, 45, 90].map(m => (
+              <button
+                key={m}
+                className={
+                  minutes === m
+                    ? "time-option active"
+                    : "time-option"
+                }
+                onClick={() => {
+                  setMinutes(m);
+                  setGenerated(false);
+                  setMission(null);
+                }}
+              >
+                <strong>{m}</strong>
+                <span>minutes</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="builder-label">
+            I WANT TO FEEL
+          </div>
+
+          <div className="mood-options">
+            {["Peaceful", "Curious", "Social", "Adventurous"].map(m => (
+              <button
+                key={m}
+                className={
+                  mood === m
+                    ? "mood-option active"
+                    : "mood-option"
+                }
+                onClick={() => {
+                  setMood(m);
+                  setGenerated(false);
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          <div className="budget-row">
+            <span>
+              <Ticket size={17} />
+              Budget
+            </span>
+
+            <strong>₹0–₹300</strong>
+          </div>
+
+          <button
+            className="mission-generate"
+            onClick={generateMission}
+            disabled={loading}
+          >
+            <Sparkles size={18} />
+
+            {loading
+              ? "Creating your mission..."
+              : generated
+                ? "Make another mission"
+                : "Give me a mission"
+            }
+          </button>
+
+        </div>
+
+        <div className="mission-preview">
+
+          <div className="mission-orbit">
+            <Crosshair size={30} />
+          </div>
+
+          <span className="mission-kicker">
+            {loading
+              ? "CREATING..."
+              : generated
+                ? "YOUR MISSION"
+                : "READY WHEN YOU ARE"
+            }
+          </span>
+
+          {error ? (
+            <>
+              <h2>Something went wrong.</h2>
+
+              <p>
+                Couldn't create your mission. Make sure the
+                TouchGrass backend is running.
+              </p>
+            </>
+          ) : !generated ? (
+            <>
+              <h2>
+                A little outside time goes a long way.
+              </h2>
+
+              <p>
+                Choose your time and mood, then let OutThere
+                decide what is worth leaving the house for.
+              </p>
+
+              <div className="mission-hint">
+                <Leaf size={17} />
+                The goal isn't to use the app. It's to leave it.
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>{mission.title}</h2>
+
+              <p>
+                {mission.place} · {minutes} minutes ·{" "}
+                {mood.toLowerCase()}
+              </p>
+
+              <div className="mission-steps">
+                {mission.steps.map((step, index) => (
+                  <div key={step}>
+                    <span>{index + 1}</span>
+                    <p>{step}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+
+      <div className="mission-rules">
+
+        <div>
+          <Clock3 />
+          <strong>45 min default</strong>
+          <span>Short enough to actually do</span>
+        </div>
+
+        <div>
+          <MapPin />
+          <strong>Nearby first</strong>
+          <span>No epic planning required</span>
+        </div>
+
+        <div>
+          <Sparkles />
+          <strong>AI-guided</strong>
+          <span>Gemma turns context into a plan</span>
+        </div>
+
+      </div>
+    </PageShell>
+  );
 }
 
 function PageShell({eyebrow,title,subtitle,children}) { return <div className="page-shell"><div className="page-heading"><span className="page-eyebrow"><Leaf size={15}/> {eyebrow}</span><h1>{title}</h1><p>{subtitle}</p></div>{children}</div>; }
@@ -110,6 +579,11 @@ function OptionCard({icon,image,title,text,button,onClick}) { return <article cl
 
 function App() {
   const [active,setActive] = React.useState("Home");
+  React.useEffect(() => {
+  getUserLocation().catch((error) => {
+    console.error("Could not get user location:", error);
+  });
+}, []);
   const nav=["Home","Explore","Events","Missions"];
   const page = active === "Explore" ? <Explore/> : active === "Events" ? <Events/> : active === "Missions" ? <Missions/> : <Home setActive={setActive}/>;
   return <div className="app-shell"><header className="topbar"><div className="brand"><div className="brand-mark"><Leaf size={23}/></div><span>OutThere</span></div><nav className="desktop-nav">{nav.map(item=><button key={item} className={active===item?"nav-item active":"nav-item"} onClick={()=>setActive(item)}>{item}</button>)}</nav><button className="location-button" aria-label="Location"><Navigation size={23}/></button></header><main>{page}</main><footer className="footer"><div className="mobile-nav">{nav.map((item,i)=><button key={item} onClick={()=>setActive(item)} className={active===item?"mobile-nav-item active":"mobile-nav-item"}>{[<Compass/>,<Search/>,<Ticket/>,<Crosshair/>][i]}<span>{item}</span></button>)}</div><p className="phone-reminder">Put your phone down. <Leaf size={14}/></p></footer></div>;
