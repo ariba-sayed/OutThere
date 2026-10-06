@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 import requests
-
+import time
 weather_bp = Blueprint("weather", __name__)
 
 
@@ -67,13 +67,34 @@ def weather():
 
     try:
 
-        response = requests.get(
-            "https://api.open-meteo.com/v1/forecast",
-            params=params,
-            timeout=15
-        )
+        response = None
 
-        response.raise_for_status()
+        for attempt in range(3):
+
+            try:
+                response = requests.get(
+                    "https://api.open-meteo.com/v1/forecast",
+                    params=params,
+                    timeout=15
+                )
+
+                response.raise_for_status()
+                break
+
+            except requests.RequestException as error:
+
+                print(
+                    f"Weather API attempt {attempt + 1} failed:",
+                    error
+                )
+
+                if attempt < 2:
+                    time.sleep(2)
+
+        if response is None or response.status_code != 200:
+            return jsonify({
+                "error": "Could not fetch weather"
+            }), 503
 
         data = response.json()
 
