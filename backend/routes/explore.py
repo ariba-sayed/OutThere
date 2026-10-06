@@ -45,6 +45,7 @@ def explore():
     weather_params = {
         "latitude": latitude,
         "longitude": longitude,
+
         "current": (
             "temperature_2m,"
             "apparent_temperature,"
@@ -52,12 +53,23 @@ def explore():
             "weather_code,"
             "wind_speed_10m"
         ),
+
+        # We also need sunrise and sunset
+        # for the OutThere timing logic.
+        "daily": (
+            "sunrise,"
+            "sunset"
+        ),
+
         "timezone": "auto"
     }
 
     try:
 
-        # Places request
+        # -----------------------------
+        # PLACES REQUEST
+        # -----------------------------
+
         places_response = requests.get(
             "https://serpapi.com/search.json",
             params=places_params,
@@ -70,26 +82,64 @@ def explore():
 
         places = []
 
-        for place in places_data.get("local_results", [])[:10]:
+        for place in places_data.get(
+            "local_results",
+            []
+        )[:10]:
 
             places.append({
-                "title": place.get("title", "Outdoor place"),
-                "type": place.get("type", "Outdoor"),
-                "distance": place.get("distance", "Nearby"),
-                "cost": place.get("price", "Free / Check price"),
+                "title": place.get(
+                    "title",
+                    "Outdoor place"
+                ),
+
+                "type": place.get(
+                    "type",
+                    "Outdoor"
+                ),
+
+                "distance": place.get(
+                    "distance",
+                    "Nearby"
+                ),
+
+                "cost": place.get(
+                    "price",
+                    "Free / Check price"
+                ),
+
                 "time": (
                     place.get("open_state")
                     or place.get("hours")
                     or "Check opening hours"
                 ),
-                "rating": place.get("rating"),
-                "reviews": place.get("reviews"),
-                "address": place.get("address"),
-                "image": place.get("thumbnail"),
-                "reason": "A nearby outdoor place you could explore."
+
+                "rating": place.get(
+                    "rating"
+                ),
+
+                "reviews": place.get(
+                    "reviews"
+                ),
+
+                "address": place.get(
+                    "address"
+                ),
+
+                "image": place.get(
+                    "thumbnail"
+                ),
+
+                "reason": (
+                    "A nearby outdoor place "
+                    "you could explore."
+                )
             })
 
-        # Weather request
+        # -----------------------------
+        # WEATHER REQUEST
+        # -----------------------------
+
         weather_response = requests.get(
             "https://api.open-meteo.com/v1/forecast",
             params=weather_params,
@@ -99,23 +149,69 @@ def explore():
         weather_response.raise_for_status()
 
         weather_data = weather_response.json()
-        current_weather = weather_data.get("current", {})
+
+        current_weather = weather_data.get(
+            "current",
+            {}
+        )
+
+        daily_weather = weather_data.get(
+            "daily",
+            {}
+        )
+
+        # -----------------------------
+        # SUNRISE / SUNSET
+        # -----------------------------
+
+        sunrise = None
+        sunset = None
+
+        if daily_weather.get("sunrise"):
+            sunrise = daily_weather["sunrise"][0]
+
+        if daily_weather.get("sunset"):
+            sunset = daily_weather["sunset"][0]
+
+        print("Explore sunrise:", sunrise)
+        print("Explore sunset:", sunset)
+
+        # -----------------------------
+        # FINAL RESPONSE
+        # -----------------------------
 
         return jsonify({
+
             "places": places,
+
             "weather": {
-                "temperature": current_weather.get("temperature_2m"),
+
+                "temperature": current_weather.get(
+                    "temperature_2m"
+                ),
+
                 "feels_like": current_weather.get(
                     "apparent_temperature"
                 ),
+
                 "precipitation": current_weather.get(
                     "precipitation"
                 ),
+
                 "weather_code": current_weather.get(
                     "weather_code"
                 ),
+
                 "wind_speed": current_weather.get(
                     "wind_speed_10m"
+                ),
+
+                "sunrise": sunrise,
+
+                "sunset": sunset,
+
+                "timezone": weather_data.get(
+                    "timezone"
                 )
             }
         })
