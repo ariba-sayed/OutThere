@@ -103,46 +103,543 @@ function PlaceCard({ place }) {
     </div>
   </article>;
 }
+const outThereImages = {
+  sunrise:
+    "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1600&q=85",
 
+  morning:
+    "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=85",
+
+  lateMorning:
+    "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1600&q=85",
+
+  afternoon:
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=85",
+
+  sunset:
+    "https://images.unsplash.com/photo-1472120435266-53107fd0c44a?auto=format&fit=crop&w=1600&q=85",
+
+  evening:
+    "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=85",
+
+  stargazing:
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=85"
+};
+
+
+function getOutThereMoment(weather) {
+  if (!weather?.sunrise || !weather?.sunset) {
+  return {
+    type: "loading",
+    label: "CHECKING TODAY'S SKY",
+    icon: "☀️",
+    time: "—",
+    period: "",
+    message: "Checking the best time to get outside.",
+    image: outThereImages.morning
+  };
+}
+
+  const now = new Date();
+
+  const sunrise = new Date(weather.sunrise);
+  const sunset = new Date(weather.sunset);
+
+  const currentMinutes =
+    now.getHours() * 60 + now.getMinutes();
+
+  const sunriseMinutes =
+    sunrise.getHours() * 60 + sunrise.getMinutes();
+
+  const sunsetMinutes =
+    sunset.getHours() * 60 + sunset.getMinutes();
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  };
+
+
+  // 🌅 Before / around sunrise
+  if (currentMinutes < sunriseMinutes + 30) {
+    return {
+      type: "sunrise",
+      label: "TODAY'S SUNRISE",
+      icon: "🌅",
+      time: formatTime(sunrise),
+      message: "The day is waking up. Perfect time for a quiet walk.",
+      image: outThereImages.sunrise
+    };
+  }
+
+
+  // ☀️ Morning
+  if (currentMinutes < 10 * 60) {
+    return {
+      type: "morning",
+      label: "GOOD MORNING",
+      icon: "☀️",
+      time: formatTime(sunset),
+      message: "Good morning. Get outside while it's cool.",
+      image: outThereImages.morning
+    };
+  }
+
+
+  // 🌤️ Late morning
+  if (currentMinutes < 12 * 60) {
+    return {
+      type: "lateMorning",
+      label: "LATE MORNING",
+      icon: "🌤️",
+      time: formatTime(sunset),
+      message: "Still a good time to touch grass.",
+      image: outThereImages.lateMorning
+    };
+  }
+
+
+  // 🌞 Afternoon
+  if (currentMinutes < sunsetMinutes - 60) {
+    return {
+      type: "afternoon",
+      label: "THIS AFTERNOON",
+      icon: "🌞",
+      time: formatTime(sunset),
+      message: "It’s warm out. Find some shade and get moving.",
+      image: outThereImages.afternoon
+    };
+  }
+
+
+  // 🌇 Around sunset
+  if (currentMinutes < sunsetMinutes + 30) {
+    return {
+      type: "sunset",
+      label: "TONIGHT'S SUNSET",
+      icon: "🌇",
+      time: formatTime(sunset),
+      message: "Golden hour is here. Go catch it.",
+      image: outThereImages.sunset
+    };
+  }
+
+
+  // 🌙 Evening
+  if (currentMinutes < 22 * 60) {
+    return {
+      type: "evening",
+      label: "THIS EVENING",
+      icon: "🌙",
+      time: formatTime(sunset),
+      message: "The day’s winding down.",
+      image: outThereImages.evening
+    };
+  }
+
+
+  // 🌌 Late night
+  return {
+    type: "stargazing",
+    label: "TONIGHT'S SKY",
+    icon: "🌌",
+    time: formatTime(sunrise),
+    message: "The city is quiet. Perfect time for a little stargazing.",
+    image: outThereImages.stargazing
+  };
+}
 function Home({ setActive }) {
+
+  const [weather, setWeather] = React.useState(null);
+
+  React.useEffect(() => {
+
+    const loadWeather = async () => {
+
+      try {
+
+        const location = await getUserLocation();
+
+        const response = await fetch(
+          `${API_URL}/api/weather/?latitude=${location.latitude}&longitude=${location.longitude}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch weather");
+        }
+
+        const data = await response.json();
+
+        console.log("Home weather:", data);
+
+        setWeather(data);
+
+      } catch (error) {
+
+        console.error(
+          "Failed to fetch home weather:",
+          error
+        );
+
+      }
+
+    };
+
+    loadWeather();
+
+  }, []);
+
+
+  const moment = getOutThereMoment(weather);
+
+
   return <>
     <section className="hero">
-      <div className="hero-copy"><div className="location-label"><MapPin size={19} /><span>Bengaluru · Today</span></div><h1>Give yourself a<br />reason to go outside.</h1><p>Here’s what’s happening around you today.</p></div>
-      <article className="sunset-card"><img src="https://images.unsplash.com/photo-1472120435266-53107fd0c44a?auto=format&fit=crop&w=1600&q=85" alt="Golden sunset over a city and trees" /><div className="sunset-overlay" /><div className="sunset-main"><div className="eyebrow"><Sun size={17} /> TONIGHT'S SUNSET</div><div className="sunset-time"><strong>6:07</strong><span>PM</span></div><p>Looks worth seeing</p><button className="light-button" onClick={() => setActive("Explore")}>Find a sunset spot <ArrowRight size={17} /></button></div><div className="sunset-stats"><div><span>☀️ Sunset quality</span><strong>8.2 / 10</strong></div><div><span>☁️ Cloud cover</span><strong>72%</strong></div><div><span>🌧️ Rain chance</span><strong>18%</strong></div><div><span>◷ Best window</span><strong>5:40 – 6:30 PM</strong></div></div></article>
+
+      <div className="hero-copy">
+
+        <div className="location-label">
+          <MapPin size={19} />
+          <span>Bengaluru · Today</span>
+        </div>
+
+        <h1>
+          Give yourself a<br />
+          reason to go outside.
+        </h1>
+
+        <p>
+          Here’s what’s happening around you today.
+        </p>
+
+      </div>
+
+
+      <article className="sunset-card">
+
+        <img
+          src={moment.image}
+          alt=""
+        />
+
+        <div className="sunset-overlay" />
+
+        <div className="sunset-main">
+
+          <div className="eyebrow">
+
+            <Sun size={17} />
+
+            {moment.label}
+
+          </div>
+
+
+          <div className="sunset-time">
+
+            <strong>
+              {moment.time.split(" ")[0]}
+            </strong>
+
+            <span>
+              {moment.time.split(" ")[1]}
+            </span>
+
+          </div>
+
+
+          <p>
+            {moment.message}
+          </p>
+
+
+    
+
+        </div>
+
+
+        <div className="sunset-stats">
+
+          <div>
+            <span>
+              {moment.icon} OutThere now
+            </span>
+
+            <strong>
+              {moment.type === "stargazing"
+                ? "Stargazing"
+                : moment.type === "sunset"
+                  ? "Golden hour"
+                  : moment.type === "loading"
+                    ? "Checking..."
+                    : "Good time"}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>🌅 Sunrise</span>
+
+            <strong>
+              {weather?.sunrise
+                ? new Date(weather.sunrise).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit"
+                  })
+                : "—"}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>🌇 Sunset</span>
+
+            <strong>
+              {weather?.sunset
+                ? new Date(weather.sunset).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit"
+                  })
+                : "—"}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>◷ Best window</span>
+
+            <strong>
+              {weather?.sunset
+                ? `${new Date(
+                    new Date(weather.sunset).getTime() - 30 * 60000
+                  ).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit"
+                  })} – ${new Date(
+                    new Date(weather.sunset).getTime() + 30 * 60000
+                  ).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit"
+                  })}`
+                : "—"}
+            </strong>
+          </div>
+
+        </div>
+
+      </article>
+
     </section>
-    <section className="section"><div className="section-heading"><h2><Sparkles size={22} /> Things happening near you</h2><button className="text-button" onClick={() => setActive("Events")}>See all <ArrowRight size={16} /></button></div><div className="events-grid">{events.slice(0,4).map(e => <EventCard key={e.title} event={e} />)}</div></section>
-    <section className="section options-section"><div className="section-heading"><h2><Leaf size={22} /> Your outdoor options</h2></div><div className="options-grid">
-      <OptionCard icon={<Compass />} image={places[0].image} title="GO SOMEWHERE" text="3 places worth visiting today" button="Explore" onClick={() => setActive("Explore")} />
-      <OptionCard icon={<Crosshair />} image="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80" title="GIVE ME A MISSION" text="I have 45 minutes. Make me do something outside." button="Surprise me" onClick={() => setActive("Missions")} />
-      <OptionCard icon={<Ticket />} image="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1000&q=80" title="FIND AN EVENT" text="12 things happening around you" button="See events" onClick={() => setActive("Events")} />
-    </div></section>
-    <section className="bottom-grid"><div><div className="section-heading compact"><h2><Sun size={22} /> Good conditions today</h2></div><div className="conditions">{conditions.map(({icon:Icon,label,value}) => <div className="condition" key={label}><Icon size={21}/><div><span>{label}</span><strong>{value}</strong></div></div>)}</div></div><div className="ai-recommendation"><div className="ai-title"><Sparkles size={18}/> AI Recommendation</div><p>Today looks especially good for a sunset walk. High clouds could create dramatic colours.</p><button className="round-arrow" onClick={() => setActive("Missions")}><ArrowRight size={16}/></button></div></section>
+
+
+    <section className="section">
+
+      <div className="section-heading">
+
+        <h2>
+          <Sparkles size={22} />
+          Things happening near you
+        </h2>
+
+        <button
+          className="text-button"
+          onClick={() => setActive("Events")}
+        >
+          See all
+          <ArrowRight size={16} />
+        </button>
+
+      </div>
+
+      <div className="events-grid">
+        {events.slice(0,4).map(e => (
+          <EventCard
+            key={e.title}
+            event={e}
+          />
+        ))}
+      </div>
+
+    </section>
+
+
+    <section className="section options-section">
+
+      <div className="section-heading">
+
+        <h2>
+          <Leaf size={22} />
+          Your outdoor options
+        </h2>
+
+      </div>
+
+      <div className="options-grid">
+
+        <OptionCard
+          icon={<Compass />}
+          image={places[0].image}
+          title="GO SOMEWHERE"
+          text="3 places worth visiting today"
+          button="Explore"
+          onClick={() => setActive("Explore")}
+        />
+
+        <OptionCard
+          icon={<Crosshair />}
+          image="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80"
+          title="GIVE ME A MISSION"
+          text="I have 45 minutes. Make me do something outside."
+          button="Surprise me"
+          onClick={() => setActive("Missions")}
+        />
+
+        <OptionCard
+          icon={<Ticket />}
+          image="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1000&q=80"
+          title="FIND AN EVENT"
+          text="12 things happening around you"
+          button="See events"
+          onClick={() => setActive("Events")}
+        />
+
+      </div>
+
+    </section>
+
+
+    <section className="bottom-grid">
+
+      <div>
+
+        <div className="section-heading compact">
+
+          <h2>
+            <Sun size={22} />
+            Good conditions today
+          </h2>
+
+        </div>
+
+        <div className="conditions">
+
+          {conditions.map(
+            ({icon:Icon,label,value}) => (
+
+              <div
+                className="condition"
+                key={label}
+              >
+
+                <Icon size={21}/>
+
+                <div>
+
+                  <span>{label}</span>
+
+                  <strong>{value}</strong>
+
+                </div>
+
+              </div>
+
+            )
+          )}
+
+        </div>
+
+      </div>
+
+
+      <div className="ai-recommendation">
+
+        <div className="ai-title">
+          <Sparkles size={18}/>
+          AI Recommendation
+        </div>
+
+        <p>
+          Today looks especially good for a sunset walk.
+          High clouds could create dramatic colours.
+        </p>
+
+        <button
+          className="round-arrow"
+          onClick={() => setActive("Missions")}
+        >
+          <ArrowRight size={16}/>
+        </button>
+
+      </div>
+
+    </section>
+
   </>;
 }
 
 function Explore() {
+  const [weather, setWeather] = React.useState(null);
   const [places, setPlaces] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
-
+  const [recommendations, setRecommendations] = React.useState([]);
   React.useEffect(() => {
-    fetch(`${API_URL}/api/explore/`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch places");
-        }
-        return response.json();
-      })
-      .then(data => {
-        setPlaces(data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error("Failed to fetch places:", error);
-        setError(true);
-        setLoading(false);
-      });
-  }, []);
+  const loadPlaces = async () => {
+    try {
+      const location = await getUserLocation();
+
+      const response = await fetch(
+        `${API_URL}/api/explore/?latitude=${location.latitude}&longitude=${location.longitude}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch places");
+      }
+
+      const data = await response.json();
+
+      setPlaces(data.places);
+setWeather(data.weather);
+
+const recommendationResponse = await fetch(
+  `${API_URL}/api/recommendations/`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      places: data.places,
+      weather: data.weather,
+    }),
+  }
+);
+
+if (recommendationResponse.ok) {
+  const recommendationData = await recommendationResponse.json();
+
+  console.log(
+    "Gemma recommendations:",
+    recommendationData
+  );
+
+  setRecommendations(
+    recommendationData.recommendations || []
+  );
+}
+
+setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch places:", error);
+      setError(true);
+      setLoading(false);
+    }
+  };
+
+  loadPlaces();
+}, []);
 
   if (loading) {
     return (
@@ -171,59 +668,91 @@ function Explore() {
   }
 
   return (
-    <PageShell
-      eyebrow="EXPLORE OUTSIDE"
-      title="Find somewhere worth going."
-      subtitle="Places nearby, picked for how good they are to be outside today."
-    >
-      <div className="search-row">
-        <div className="search-box">
-          <Search size={19} />
-          <input placeholder="Search places, parks, walks..." />
-        </div>
-
-        <button className="filter-button">
-          <SlidersHorizontal size={17} />
-          Filters
-        </button>
-      </div>
-
-      <div className="chip-row">
-        <span className="chip active">For you</span>
-        <span className="chip">Nature</span>
-        <span className="chip">Walks</span>
-        <span className="chip">Photography</span>
-        <span className="chip">Peaceful</span>
-        <span className="chip">Free</span>
-      </div>
-
-      <div className="ai-banner">
-        <div className="ai-banner-icon">
-          <Sparkles size={21} />
-        </div>
-
+  <PageShell
+    eyebrow="EXPLORE OUTSIDE"
+    title="Find somewhere worth going."
+    subtitle="Places nearby, picked for how good they are to be outside today."
+  >
+    {weather && (
+      <div className="weather-card">
         <div>
-          <strong>Gemma's pick for today</strong>
-          <p>
-            Cloudy skies + mild weather make outdoor walks especially
-            comfortable this afternoon.
-          </p>
+          <div className="weather-label">CURRENT WEATHER</div>
+
+          <div className="weather-temperature">
+            {Math.round(weather.temperature)}°C
+          </div>
+
+          <div className="weather-description">
+            {weather.weather}
+          </div>
         </div>
 
-        <span className="score">8.7</span>
+        <div className="weather-details">
+          <div>
+            <span>Feels like</span>
+            <strong>{Math.round(weather.feels_like)}°C</strong>
+          </div>
+
+          <div>
+            <span>Humidity</span>
+            <strong>{weather.humidity}%</strong>
+          </div>
+
+          <div>
+            <span>Wind</span>
+            <strong>{weather.wind_speed} km/h</strong>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div className="search-row">
+      <div className="search-box">
+        <Search size={19} />
+        <input placeholder="Search places, parks, walks..." />
       </div>
 
-      <div className="place-grid">
-        {places.map(place => (
-          <PlaceCard
-            key={place.title}
-            place={place}
-          />
-        ))}
+      <button className="filter-button">
+        <SlidersHorizontal size={17} />
+        Filters
+      </button>
+    </div>
+
+    <div className="chip-row">
+      <span className="chip active">For you</span>
+      <span className="chip">Nature</span>
+      <span className="chip">Walks</span>
+      <span className="chip">Photography</span>
+      <span className="chip">Peaceful</span>
+      <span className="chip">Free</span>
+    </div>
+
+    <div className="ai-banner">
+      <div className="ai-banner-icon">
+        <Sparkles size={21} />
       </div>
-    </PageShell>
-  );
-}
+
+      <div>
+        <strong>Gemma's pick for today</strong>
+        <p>
+          Cloudy skies + mild weather make outdoor walks especially
+          comfortable this afternoon.
+        </p>
+      </div>
+
+      <span className="score">8.7</span>
+    </div>
+
+    <div className="place-grid">
+      {places.map(place => (
+        <PlaceCard
+          key={place.title}
+          place={place}
+        />
+      ))}
+    </div>
+  </PageShell>
+);}
 
 function Events() {
   const [filter, setFilter] = React.useState("Today");
@@ -232,22 +761,53 @@ function Events() {
   const [error, setError] = React.useState(false);
 
   React.useEffect(() => {
-    fetch(`${API_URL}/api/events/`)
-      .then(response => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const location = await getUserLocation();
+
+        const response = await fetch(
+          `${API_URL}/api/events/?latitude=${location.latitude}&longitude=${location.longitude}`
+        );
+
         if (!response.ok) {
           throw new Error("Failed to fetch events");
         }
-        return response.json();
-      })
-      .then(data => {
-        setEvents(data);
+
+        const data = await response.json();
+
+        console.log("Events:", data);
+        console.log("Events array:", data.events);
+
+        if (Array.isArray(data.events)) {
+          setEvents(data.events);
+
+          console.log(
+            "Event dates:",
+            data.events.map((event) => ({
+              title: event.title,
+              date: event.date,
+              date_filter: event.date_filter,
+              event_type: event.event_type,
+            }))
+          );
+        } else {
+          console.error("Backend did not return an events array");
+          setEvents([]);
+        }
+
         setLoading(false);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error("Failed to fetch events:", error);
+        setEvents([]);
         setError(true);
         setLoading(false);
-      });
+      }
+    };
+
+    loadEvents();
   }, []);
 
   if (loading) {
@@ -277,13 +837,28 @@ function Events() {
   }
 
   const filtered =
-    filter === "All"
-      ? events
-      : filter === "Today"
-        ? events.filter(e => e.date === "Today")
-        : filter === "Tomorrow"
-          ? events.filter(e => e.date === "Tomorrow")
-          : events.filter(e => e.date !== "Today" && e.date !== "Tomorrow");
+  filter === "All"
+    ? events
+    : filter === "Today"
+      ? events.filter(
+          (event) =>
+            event.date === "Today" ||
+            event.date_filter === "Today" ||
+            event.event_type === "activity"
+        )
+      : filter === "Tomorrow"
+        ? events.filter(
+            (event) =>
+              event.date === "Tomorrow" ||
+              event.date_filter === "Tomorrow" ||
+              event.event_type === "activity"
+          )
+        : events.filter(
+            (event) =>
+              event.date === "Weekend" ||
+              event.date_filter === "Weekend" ||
+              event.event_type === "activity"
+          );
 
   return (
     <PageShell
@@ -349,9 +924,9 @@ function Events() {
       </div>
 
       <div className="events-grid events-page-grid">
-        {filtered.map(event => (
+        {filtered.map((event) => (
           <EventCard
-            key={event.id}
+            key={event.id || event.title}
             event={event}
           />
         ))}
@@ -579,11 +1154,6 @@ function OptionCard({icon,image,title,text,button,onClick}) { return <article cl
 
 function App() {
   const [active,setActive] = React.useState("Home");
-  React.useEffect(() => {
-  getUserLocation().catch((error) => {
-    console.error("Could not get user location:", error);
-  });
-}, []);
   const nav=["Home","Explore","Events","Missions"];
   const page = active === "Explore" ? <Explore/> : active === "Events" ? <Events/> : active === "Missions" ? <Missions/> : <Home setActive={setActive}/>;
   return <div className="app-shell"><header className="topbar"><div className="brand"><div className="brand-mark"><Leaf size={23}/></div><span>OutThere</span></div><nav className="desktop-nav">{nav.map(item=><button key={item} className={active===item?"nav-item active":"nav-item"} onClick={()=>setActive(item)}>{item}</button>)}</nav><button className="location-button" aria-label="Location"><Navigation size={23}/></button></header><main>{page}</main><footer className="footer"><div className="mobile-nav">{nav.map((item,i)=><button key={item} onClick={()=>setActive(item)} className={active===item?"mobile-nav-item active":"mobile-nav-item"}>{[<Compass/>,<Search/>,<Ticket/>,<Crosshair/>][i]}<span>{item}</span></button>)}</div><p className="phone-reminder">Put your phone down. <Leaf size={14}/></p></footer></div>;
