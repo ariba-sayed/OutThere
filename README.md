@@ -40,6 +40,8 @@ pip install -r requirements.txt
 Create a `.env` file in the `backend/` directory:
 ```env
 SERPAPI_KEY=your_serpapi_key_here
+HF_TOKEN=your_huggingface_token_here
+GEMMA_MODEL=google/gemma-4-26B-A4B-it
 ```
 
 ### 4. Run the Application
