@@ -205,7 +205,7 @@ function EventCard({ event }) {
 
       <div className="event-content">
 
-        <h3>{event.title}</h3>
+        <a href={`https://www.google.com/search?q=${encodeURIComponent(event.title)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}><h3>{event.title}</h3></a>
 
         <p className="event-category">
           <Leaf size={14} />
@@ -229,12 +229,7 @@ function EventCard({ event }) {
             {event.price}
           </span>
 
-          <button
-            className="round-arrow"
-            aria-label={`Open ${event.title}`}
-          >
-            <ArrowRight size={15} />
-          </button>
+          
 
         </div>
 
@@ -303,10 +298,16 @@ function PlaceCard({ place }) {
           </span>
         </div>
 
-        <button className="green-button">
+        <a 
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.title)}`} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="green-button"
+          style={{ textDecoration: "none" }}
+        >
           Get directions
           <Navigation size={15} />
-        </button>
+        </a>
 
       </div>
 
@@ -446,7 +447,7 @@ function getOutThereMoment(weather) {
       time: formatSunTime(weather.sunrise),
 
       message:
-        "The day is waking up. Perfect time for a quiet walk.",
+        "Perfect time for a quiet walk.",
 
       image:
         outThereImages.sunrise
@@ -578,8 +579,7 @@ function getOutThereMoment(weather) {
 
       time: formatSunTime(weather.sunset),
 
-      message:
-        "The day’s winding down. How about a short evening walk.",
+      message: "The day’s winding down.\nHow about a short evening walk.",
 
       image:
         outThereImages.evening
@@ -1141,7 +1141,9 @@ if (eventsResponse.ok) {
 
 function Explore() {
 
-  const [weather, setWeather] =
+    const [searchQuery, setSearchQuery] = React.useState("");
+  const [activeChip, setActiveChip] = React.useState("For you");
+const [weather, setWeather] =
     React.useState(null);
 
   const [places, setPlaces] =
@@ -1361,20 +1363,6 @@ function Explore() {
 
             </div>
 
-
-            <div>
-
-              <span>
-                Humidity
-              </span>
-
-              <strong>
-                {weather.humidity}%
-              </strong>
-
-            </div>
-
-
             <div>
 
               <span>
@@ -1400,51 +1388,17 @@ function Explore() {
 
           <Search size={19} />
 
-          <input
-            placeholder="Search places, parks, walks..."
-          />
+          <input placeholder="Search places, parks, walks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
 
         </div>
 
 
-        <button className="filter-button">
-
-          <SlidersHorizontal size={17} />
-
-          Filters
-
-        </button>
+        
 
       </div>
 
 
-      <div className="chip-row">
-
-        <span className="chip active">
-          For you
-        </span>
-
-        <span className="chip">
-          Nature
-        </span>
-
-        <span className="chip">
-          Walks
-        </span>
-
-        <span className="chip">
-          Photography
-        </span>
-
-        <span className="chip">
-          Peaceful
-        </span>
-
-        <span className="chip">
-          Free
-        </span>
-
-      </div>
+      
 
 
       <div className="ai-banner">
@@ -1492,7 +1446,16 @@ function Explore() {
       ...otherPlaces,
     ];
 
-    return orderedPlaces.map((place, index) => {
+        const filteredPlaces = orderedPlaces.filter(place => {
+      const matchesSearch = place.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           place.type.toLowerCase().includes(searchQuery.toLowerCase());
+      if (activeChip === "For you") return matchesSearch;
+      const chip = activeChip.toLowerCase();
+      const matchesChip = place.type.toLowerCase().includes(chip) || (chip === "free" ? place.cost === "Free" : false);
+      return matchesSearch && matchesChip;
+    });
+
+    return filteredPlaces.map((place, index) => {
       const recommendation = recommendations.find(
         (item) =>
           item.place === place.title ||
@@ -1714,17 +1677,17 @@ function Events() {
       subtitle="Real-world things to do, close enough that you might actually go."
     >
 
+      
+      
+      
       <div className="event-toolbar">
-
         <div className="chip-row">
-
           <span
             className={`chip ${filter === "Today" ? "active" : ""}`}
             onClick={() => setFilter("Today")}
           >
             Today
           </span>
-
 
           <span
             className={`chip ${filter === "Tomorrow" ? "active" : ""}`}
@@ -1733,7 +1696,6 @@ function Events() {
             Tomorrow
           </span>
 
-
           <span
             className={`chip ${filter === "Weekend" ? "active" : ""}`}
             onClick={() => setFilter("Weekend")}
@@ -1741,29 +1703,15 @@ function Events() {
             This weekend
           </span>
 
-
           <span
             className={`chip ${filter === "All" ? "active" : ""}`}
             onClick={() => setFilter("All")}
           >
             All
           </span>
-
         </div>
-
-
-        <button className="filter-button">
-
-          <Filter size={17} />
-
-          Categories
-
-        </button>
-
       </div>
-
-
-      <div className="events-feature">
+    <div className="events-feature">
 
         <div>
 
@@ -1996,24 +1944,6 @@ function Missions() {
               </button>
 
             ))}
-
-          </div>
-
-
-          <div className="budget-row">
-
-            <span>
-
-              <Ticket size={17} />
-
-              Budget
-
-            </span>
-
-
-            <strong>
-              ₹0–₹300
-            </strong>
 
           </div>
 
@@ -2371,15 +2301,7 @@ function App() {
         </nav>
 
 
-        <button
-          className="location-button"
-          aria-label="Location"
-        >
-
-          <Navigation size={23} />
-
-        </button>
-
+        
       </header>
 
 
@@ -2389,38 +2311,6 @@ function App() {
 
 
       <footer className="footer">
-
-        <div className="mobile-nav">
-
-          {nav.map((item, i) => (
-
-            <button
-              key={item}
-              onClick={() => setActive(item)}
-              className={
-                active === item
-                  ? "mobile-nav-item active"
-                  : "mobile-nav-item"
-              }
-            >
-
-              {[
-                <Compass />,
-                <Search />,
-                <Ticket />,
-                <Crosshair />
-              ][i]}
-
-              <span>
-                {item}
-              </span>
-
-            </button>
-
-          ))}
-
-        </div>
-
 
         <p className="phone-reminder">
 
