@@ -414,6 +414,52 @@ def format_event(event, index):
 # EVENTS API
 # =========================================================
 
+
+# =====================================================
+# FALLBACK MOCK EVENTS
+# =====================================================
+def get_mock_events(dates):
+    today_str = dates["today"].isoformat()
+    tomorrow_str = dates["tomorrow"].isoformat()
+    
+    return [
+        {
+            "id": 991,
+            "title": "Community Morning Walk",
+            "category": "Nature",
+            "date": "Today",
+            "date_filter": "Today",
+            "event_date": today_str,
+            "event_type": "event",
+            "time": "6:30 AM",
+            "venue": "Cubbon Park",
+            "address": "Cubbon Park, Bengaluru",
+            "distance": "Nearby",
+            "price": "Free",
+            "image": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=80",
+            "link": "",
+            "description": "A relaxing morning walk with the community to start the day.",
+        },
+        {
+            "id": 992,
+            "title": "Urban Photography Meetup",
+            "category": "Photography",
+            "date": "Tomorrow",
+            "date_filter": "Tomorrow",
+            "event_date": tomorrow_str,
+            "event_type": "event",
+            "time": "5:00 PM",
+            "venue": "MG Road",
+            "address": "MG Road, Bengaluru",
+            "distance": "Nearby",
+            "price": "Free",
+            "image": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80",
+            "link": "",
+            "description": "Capture the golden hour in the heart of the city.",
+        },
+    ]
+
+
 @events_bp.route("/", methods=["GET"])
 def get_events():
 
@@ -621,6 +667,20 @@ def get_events():
     )
 
     # Maximum 20.
+    
+    # --- FALLBACK LOGIC START ---
+    has_today = any(e["date_filter"] == "Today" for e in formatted_events)
+    has_tomorrow = any(e["date_filter"] == "Tomorrow" for e in formatted_events)
+    
+    if not has_today or not has_tomorrow:
+        mocks = get_mock_events(dates)
+        for m in mocks:
+            if m["date_filter"] == "Today" and not has_today:
+                formatted_events.append(m)
+            elif m["date_filter"] == "Tomorrow" and not has_tomorrow:
+                formatted_events.append(m)
+    # --- FALLBACK LOGIC END ---
+    
     formatted_events = formatted_events[:20]
 
     # Re-number after sorting.
